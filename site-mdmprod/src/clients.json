@@ -1,0 +1,50 @@
+[
+ {
+  "name": "Hermès",
+  "file": "hermes.png",
+  "w": 220,
+  "h": 72
+ },
+ {
+  "name": "Mauboussin",
+  "file": "mauboussin.png",
+  "w": 200,
+  "h": 72
+ },
+ {
+  "name": "Moët & Chandon",
+  "file": "moet-chandon.png",
+  "w": 171,
+  "h": 72
+ },
+ {
+  "name": "LVMH",
+  "file": "lvmh.png",
+  "w": 302,
+  "h": 72
+ },
+ {
+  "name": "Paris Aéroport",
+  "file": "paris-aeroport.png",
+  "w": 108,
+  "h": 72
+ },
+ {
+  "name": "Chaussea",
+  "file": "chaussea.png",
+  "w": 439,
+  "h": 72
+ },
+ {
+  "name": "SNCF",
+  "file": "sncf.png",
+  "w": 309,
+  "h": 72
+ },
+ {
+  "name": "TF1",
+  "file": "tf1.png",
+  "w": 152,
+  "h": 72
+ }
+]

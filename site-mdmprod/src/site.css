@@ -331,7 +331,7 @@ input:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: 0
 .card-link { display: flex; flex-direction: column; background: var(--bg-alt); border-radius: 22px; overflow: hidden; color: var(--fg); min-width: 0; }
 .card-link:hover { text-decoration: none; }
 .card-link:hover h3 { color: var(--gold); }
-.card-link img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--line); }
+.card-link img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--line); }
 .card-body { padding: 22px 22px 26px; display: flex; flex-direction: column; gap: 8px; }
 .card-body h3 { font-size: 1.2rem; line-height: 1.25; }
 .card-body p { color: var(--fg-2); font-size: 0.95rem; }

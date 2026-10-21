@@ -52,7 +52,7 @@ def img_url(url, w=1600):
     return f"{base}/v1/fill/w_{w},h_{round(w * 0.6667)},al_c,q_85/{name}"
 
 
-def page(path, title, description, main, current=None, og_image=None, jsonld=None, index=True):
+def page(path, title, description, main, current=None, og_image=None, jsonld=None, index=True, canonical=None):
     robots = '<meta name="robots" content="noindex, nofollow">' if (PREVIEW or not index) else ""
     header = HEADER
     if current:
@@ -69,7 +69,7 @@ def page(path, title, description, main, current=None, og_image=None, jsonld=Non
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(description)}">
-<link rel="canonical" href="{SITE}{path}">
+<link rel="canonical" href="{SITE}{canonical or path}">
 {robots}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MDMProd">
@@ -121,13 +121,25 @@ def text_to_html(text):
                 out.append(f'<p><a href="{esc(local(link.group(2)))}">{esc(link.group(1))}</a></p>')
                 lines.pop(0)
                 continue
-            if len(lines) >= 1 and len(line) <= 90 and not re.search(r"[.!?:;…,]$", line):
+            if len(line) <= 90 and not re.search(r"[.!?:;…,→]$", line):
                 out.append(f"<h2>{esc(line)}</h2>")
+                lines.pop(0)
+                continue
+            if len(line) <= 90 and line.endswith("?") and len(lines) == 1:
+                out.append(f"<h3>{esc(line)}</h3>")
                 lines.pop(0)
                 continue
             out.append("<p>" + "<br>".join(esc(l) for l in lines) + "</p>")
             lines = []
     return "\n".join(out)
+
+
+def fix_links(h):
+    """Liens internes en relatif, ancien ancrage du formulaire vers /nous-contacter, liens externes dans un nouvel onglet."""
+    h = h.replace("https://www.mdmprod.fr/#mdm-vcita-contact", "/nous-contacter")
+    h = re.sub(r'href="https?://(www\.)?mdmprod\.fr', 'href="', h)
+    h = re.sub(r'<a href="(https?://[^"]+)"', r'<a href="\1" target="_blank" rel="noopener"', h)
+    return h.replace('href=""', 'href="/"')
 
 
 def contact_block():
@@ -263,28 +275,31 @@ def build_portfolio():
                            text_to_html(p.get("description", "")), related)
             page(path, p.get("seoTitle") or p["title"], p.get("seoDescription", ""), main,
                  current="/realisations", og_image=(p.get("cover") or {}).get("url"), jsonld=[ORG])
-    # pages collections + hub /realisations
-    sections = []
+    hubs = {
+        "realisations": ("/realisations", "Nos productions.", "Prestations",
+                         "Organisation de spectacles et prestations audiovisuelles | Groupe MDM",
+                         "MDM organise vos concerts, galas et spectacles partout en France. MDMProd réalise les captations et vidéos associées. Présentez votre projet."),
+        "emploi-intermittents": ("/emploi-intermittents", "Faire jouer vos artistes sans les employer.", "Vos artistes",
+                                 "Faire jouer vos artistes sans les employer | MDM & MDMProd",
+                                 "Vous avez choisi vos artistes ? MDM produit la représentation et les engage. Artiste ou technicien : nous produisons la date et vous engageons."),
+    }
+    drop = {"Présenter mon projet", "Emploi des artistes et techniciens →"}
     for cid, items in by_col.items():
         col = cols[cid]
+        hub_path, h1, eyebrow, title, desc = hubs[col["slug"]]
+        paras = [b for b in re.split(r"\n\s*\n", col.get("description") or "") if b.strip() and b.strip() not in drop]
+        lead, rest = (paras[1] if len(paras) > 1 else ""), "\n\n".join(paras[2:])
         cards = "".join(card(path, p.get("cover"), p["title"], p.get("seoDescription", "")) for path, p in items)
-        block = f'<h2 class="section-title">{esc(col["title"])}</h2><div class="cards">{cards}</div>'
-        sections.append(block)
         main = f"""<section class="page-head"><div class="wrap stack stack--center center narrow">
-<p class="eyebrow">Prestations</p><h1>{esc(col['title'])}</h1>
-<p class="lead">{esc(col.get('description') or '')}</p></div></section>
+<p class="eyebrow">{esc(eyebrow)}</p><h1>{esc(h1)}</h1>
+<p class="lead">{esc(lead)}</p>
+<div class="actions"><a class="pill" href="/nous-contacter">Présenter un projet</a></div></div></section>
 <section class="band" style="padding-top: 0;"><div class="wrap"><div class="cards">{cards}</div></div></section>
+<div class="wrap"><div class="prose">{text_to_html(rest)}</div></div>
 {cta_band()}"""
-        page(f"/portfolio-collections/{col['slug']}", f"{col['title']} | MDM & MDMProd",
-             col.get("description") or col["title"], main, current="/realisations")
-    main = f"""<section class="page-head"><div class="wrap stack stack--center center narrow">
-<p class="eyebrow">Prestations</p><h1>Ce que nous faisons.</h1>
-<p class="lead">MDM organise et produit vos spectacles. MDMProd filme vos spectacles et réalise vos vidéos. Partout en France.</p></div></section>
-<section class="band" style="padding-top: 0;"><div class="wrap">{''.join(sections)}</div></section>
-{cta_band()}"""
-    page("/realisations", "Organisation de spectacles et prestations audiovisuelles | Groupe MDM",
-         "MDM organise vos concerts, galas et spectacles partout en France. MDMProd réalise les captations et vidéos associées. Présentez votre projet.",
-         main, current="/realisations", jsonld=[ORG])
+        page(hub_path, title, desc, main, current=hub_path, jsonld=[ORG])
+        page(f"/portfolio-collections/{col['slug']}", col.get("seoTitle") or title, col.get("seoDescription") or desc,
+             main, current=hub_path, index=False, canonical=hub_path)
 
 
 def build_blog():
@@ -296,7 +311,8 @@ def build_blog():
     for p in posts:
         path = f"/post/{p['slug']}"
         meta = f"{date_fr(p['firstPublishedDate'])} · {p.get('minutesToRead', 2)} min de lecture"
-        main = article("Blog", p["title"], p.get("excerpt", ""), meta, p.get("cover"), p["html"])
+        body = fix_links(p["html"])
+        main = article("Blog", p["title"], p.get("excerpt", ""), meta, p.get("cover"), body)
         ld = {"@context": "https://schema.org", "@type": "BlogPosting", "headline": p["title"],
               "datePublished": p["firstPublishedDate"], "dateModified": p.get("lastPublishedDate"),
               "author": {"@type": "Organization", "name": "MDMProd"},
